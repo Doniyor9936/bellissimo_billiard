@@ -21,11 +21,12 @@ async function seed() {
 		return;
 	}
 
-	const passwordHash = await hashPassword(ADMIN_PASSWORD);
+	const password = await hashPassword(ADMIN_PASSWORD);
 
 	await db.insert(users).values({
 		phone: ADMIN_PHONE,
-		passwordHash,
+		password,
+		fullname: "Super Admin",
 		role: "superadmin",
 		isActive: true,
 	});
