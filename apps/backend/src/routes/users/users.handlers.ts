@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, ilike, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -20,12 +20,18 @@ export function formatUser(row: typeof users.$inferSelect) {
 }
 
 export const listHandler: AppRouteHandler<typeof listUsers> = async (c) => {
-	const { page, limit } = c.req.valid("query");
+	const { page, limit, search, isActive } = c.req.valid("query");
 	const offset = (page - 1) * limit;
+
+	const filters = and(
+		eq(users.isDeleted, false),
+		isActive !== undefined ? eq(users.isActive, isActive) : undefined,
+		search ? or(ilike(users.fullname, `%${search}%`), ilike(users.phone, `%${search}%`)) : undefined
+	);
 
 	const [items, [total]] = await Promise.all([
 		db.query.users.findMany({
-			where: eq(users.isDeleted, false),
+			where: filters,
 			limit,
 			offset,
 			orderBy: (u, { desc }) => [desc(u.createdAt)],

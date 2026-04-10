@@ -42,6 +42,24 @@ export const PaginationQuerySchema = z.object({
 			param: { name: "limit", in: "query" },
 			example: "20",
 		}),
+
+	search: z
+		.string()
+		.optional()
+		.openapi({
+			param: { name: "search", in: "query" },
+			example: "John",
+			description: "Ism, familiya yoki email bo'yicha qidirish",
+		}),
+	isActive: z
+		.enum(["true", "false"])
+		.optional()
+		.transform((val) => (val === undefined ? undefined : val === "true"))
+		.openapi({
+			param: { name: "isActive", in: "query" },
+			example: "true",
+			description: "Aktiv yoki aktiv emas userlarni filtrlash",
+		}),
 });
 
 const ErrorCodeEnum = z.enum([
