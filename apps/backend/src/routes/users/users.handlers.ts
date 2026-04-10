@@ -122,7 +122,7 @@ export const updateHandler: AppRouteHandler<typeof updateUser> = async (c) => {
 	}
 
 	const updates: Record<string, unknown> = {
-		updatedAt: new Date().toISOString(),
+		updatedAt: new Date(),
 	};
 
 	if (body.fullname !== undefined) {
