@@ -31,6 +31,12 @@ export default function createApp() {
 }
 
 export function configureOpenAPI(app: OpenAPIHono<AppBindings>) {
+	app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
+		type: "http",
+		scheme: "bearer",
+		bearerFormat: "JWT",
+	});
+
 	app.doc("/doc", {
 		openapi: "3.0.0",
 		info: {
@@ -50,6 +56,15 @@ export function configureOpenAPI(app: OpenAPIHono<AppBindings>) {
 				clientKey: "fetch",
 			},
 			url: "/doc",
+
+			authentication: {
+				preferredSecurityScheme: "bearerAuth",
+				securitySchemes: {
+					httpBearer: {
+						token: "token",
+					},
+				},
+			},
 		})
 	);
 }
