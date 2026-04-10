@@ -30,8 +30,8 @@ export const UserSchema = z
 		phone: z.string().openapi({
 			example: "+998901234567",
 		}),
-		role: z.enum(["supervisor", "admin", "manager"]).openapi({
-			example: "manager",
+		role: z.enum(["superadmin", "admin"]).openapi({
+			example: "admin",
 		}),
 		isActive: z.boolean().openapi({
 			example: true,

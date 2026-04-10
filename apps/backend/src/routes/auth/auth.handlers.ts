@@ -29,7 +29,7 @@ export const loginHandler: AppRouteHandler<typeof login> = async (c) => {
 		throw invalidCredentials("Foydalanuvchi hisobi faol emas");
 	}
 
-	const isValidPassword = await verifyPassword(password, user.passwordHash);
+	const isValidPassword = await verifyPassword(password, user.password);
 
 	if (!isValidPassword) {
 		throw invalidCredentials("Telefon raqami yoki parol noto'g'ri");

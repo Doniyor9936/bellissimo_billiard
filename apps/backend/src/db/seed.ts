@@ -13,20 +13,21 @@ async function seed() {
 	console.log("Seeding database...");
 
 	const existingSupervisor = await db.query.users.findFirst({
-		where: eq(users.role, "supervisor"),
+		where: eq(users.role, "superadmin"),
 	});
 
 	if (existingSupervisor) {
-		console.log("Supervisor already exists, skipping seed");
+		console.log("Superadmin already exists, skipping seed");
 		return;
 	}
 
-	const passwordHash = await hashPassword(ADMIN_PASSWORD);
+	const password = await hashPassword(ADMIN_PASSWORD);
 
 	await db.insert(users).values({
 		phone: ADMIN_PHONE,
-		passwordHash,
-		role: "supervisor",
+		password,
+		fullname: "Super Admin",
+		role: "superadmin",
 		isActive: true,
 	});
 
