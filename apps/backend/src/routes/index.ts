@@ -12,7 +12,7 @@ const router = createRouter()
 	.route("/auth", auth)
 	.route("/users", users)
 	.route("/organizations-type-position", organizationTypePositions)
-	.route("organization-cross-access", organizationCrossAccess)
+	.route("/organization-cross-access", organizationCrossAccess)
 	.route("/organization-types", organizationType)
 	.route("/organizations", organizations);
 

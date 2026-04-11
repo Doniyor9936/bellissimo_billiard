@@ -1,4 +1,5 @@
 export * from "./enums";
+export * from "./relation";
 export * from "./tables/organization";
 export * from "./tables/organization-cross-access";
 export * from "./tables/organization-type";
