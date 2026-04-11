@@ -22,6 +22,10 @@ export async function checkPermission(userId: string, organizationId: string): P
 		setCache(key, "NONE");
 		return "NONE";
 	}
+	if (foundUser.role === "superadmin") {
+		setCache(key, "WRITE");
+		return "WRITE";
+	}
 
 	const targetOrganization = await db.query.organizations.findFirst({
 		where: and(eq(organizations.id, organizationId), eq(organizations.isDeleted, false)),
