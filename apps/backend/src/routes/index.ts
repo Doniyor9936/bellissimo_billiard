@@ -3,6 +3,7 @@ import auth from "./auth";
 import health from "./health";
 import organizationCrossAccess from "./organization-cross-access";
 import organizationTypePositions from "./organization-type-positions";
+import organizationType from "./organization-types";
 import organizations from "./organizations";
 import users from "./users";
 
@@ -10,8 +11,9 @@ const router = createRouter()
 	.route("/", health)
 	.route("/auth", auth)
 	.route("/users", users)
-	.route("/organizations-type", organizationTypePositions)
+	.route("/organizations-type-position", organizationTypePositions)
 	.route("organization-cross-access", organizationCrossAccess)
+	.route("/organization-types", organizationType)
 	.route("/organizations", organizations);
 
 export default router;
