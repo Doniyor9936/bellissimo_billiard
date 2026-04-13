@@ -28,12 +28,18 @@ export function formatOrganizationTypePosition(
 }
 
 export const listHandler: AppRouteHandler<typeof listOrganizationTypePositions> = async (c) => {
-	const { page, limit } = c.req.valid("query");
+	const { page, limit, search, isActive } = c.req.valid("query");
 	const offset = (page - 1) * limit;
+
+	const whereConditions = [
+		eq(organizationTypePosition.isDeleted, false),
+		search ? eq(organizationTypePosition.name, search) : undefined,
+		isActive !== undefined ? eq(organizationTypePosition.isDeleted, !isActive) : undefined,
+	].filter(Boolean);
 
 	const [items, [total]] = await Promise.all([
 		db.query.organizationTypePosition.findMany({
-			where: eq(organizationTypePosition.isDeleted, false),
+			where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
 			limit,
 			offset,
 			with: { organizationType: true },
@@ -42,7 +48,7 @@ export const listHandler: AppRouteHandler<typeof listOrganizationTypePositions> 
 		db
 			.select({ count: count() })
 			.from(organizationTypePosition)
-			.where(eq(organizationTypePosition.isDeleted, false)),
+			.where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
 	]);
 
 	const totalPages = Math.ceil(total.count / limit);

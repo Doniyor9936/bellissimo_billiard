@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, ilike } from "drizzle-orm";
 
 import { db } from "@/db";
 import { organizationType } from "@/db/schema";
@@ -23,20 +23,23 @@ function formatOrganizationType(row: typeof organizationType.$inferSelect) {
 }
 
 export const listHandler: AppRouteHandler<typeof listOrganizationTypes> = async (c) => {
-	const { page, limit } = c.req.valid("query");
+	const { page, limit, search, isActive } = c.req.valid("query");
 	const offset = (page - 1) * limit;
+
+	const whereCondition = and(
+		eq(organizationType.isDeleted, false),
+		search ? ilike(organizationType.name, `%${search}%`) : undefined,
+		isActive !== undefined ? eq(organizationType.isDeleted, !isActive) : undefined
+	);
 
 	const [items, [total]] = await Promise.all([
 		db.query.organizationType.findMany({
-			where: eq(organizationType.isDeleted, false),
+			where: whereCondition,
 			limit,
 			offset,
 			orderBy: (t, { desc }) => [desc(t.createdAt)],
 		}),
-		db
-			.select({ count: count() })
-			.from(organizationType)
-			.where(eq(organizationType.isDeleted, false)),
+		db.select({ count: count() }).from(organizationType).where(whereCondition),
 	]);
 
 	const totalPages = Math.ceil(total.count / limit);

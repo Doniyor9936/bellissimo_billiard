@@ -45,12 +45,23 @@ function formatOrganizationCrossAccess(
 }
 
 export const listHandler: AppRouteHandler<typeof listOrganizationCrossAccess> = async (c) => {
-	const { page, limit } = c.req.valid("query");
+	const { page, limit, search, isActive } = c.req.valid("query");
 	const offset = (page - 1) * limit;
+
+	const whereConditions = [
+		eq(organizationCrossAccess.isDeleted, false),
+		search
+			? and(
+					eq(organizationCrossAccess.viewerId, search),
+					eq(organizationCrossAccess.targetId, search)
+				)
+			: undefined,
+		isActive !== undefined ? eq(organizationCrossAccess.isDeleted, !isActive) : undefined,
+	].filter(Boolean);
 
 	const [items, [total]] = await Promise.all([
 		db.query.organizationCrossAccess.findMany({
-			where: eq(organizationCrossAccess.isDeleted, false),
+			where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
 			limit,
 			offset,
 			orderBy: (t, { desc }) => [desc(t.createdAt)],
@@ -62,7 +73,7 @@ export const listHandler: AppRouteHandler<typeof listOrganizationCrossAccess> = 
 		db
 			.select({ count: count() })
 			.from(organizationCrossAccess)
-			.where(eq(organizationCrossAccess.isDeleted, false)),
+			.where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
 	]);
 
 	const totalPages = Math.ceil(total.count / limit);
