@@ -52,8 +52,8 @@ export const listHandler: AppRouteHandler<typeof listOrganizationCrossAccess> = 
 		eq(organizationCrossAccess.isDeleted, false),
 		search
 			? and(
-					eq(organizationCrossAccess.viewerId, search),
-					eq(organizationCrossAccess.targetId, search)
+					eq(organizationCrossAccess.viewerId, `%${search}%`),
+					eq(organizationCrossAccess.targetId, `%${search}%`)
 				)
 			: undefined,
 		isActive !== undefined ? eq(organizationCrossAccess.isDeleted, !isActive) : undefined,

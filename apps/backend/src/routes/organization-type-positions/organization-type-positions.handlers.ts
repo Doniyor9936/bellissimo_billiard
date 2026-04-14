@@ -33,7 +33,7 @@ export const listHandler: AppRouteHandler<typeof listOrganizationTypePositions> 
 
 	const whereConditions = [
 		eq(organizationTypePosition.isDeleted, false),
-		search ? eq(organizationTypePosition.name, search) : undefined,
+		search ? eq(organizationTypePosition.name, `%${search}%`) : undefined,
 		isActive !== undefined ? eq(organizationTypePosition.isDeleted, !isActive) : undefined,
 	].filter(Boolean);
 
