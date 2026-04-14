@@ -51,9 +51,9 @@ export const listHandler: AppRouteHandler<typeof listOrganizationCrossAccess> = 
 	const whereConditions = [
 		eq(organizationCrossAccess.isDeleted, false),
 		search
-			? and(
-					like(organizationCrossAccess.viewerId, `%${search}%`),
-					like(organizationCrossAccess.targetId, `%${search}%`)
+			? or(
+					like(sql`${organizationCrossAccess.viewerId}::text`, `%${search}%`),
+					like(sql`${organizationCrossAccess.targetId}::text`, `%${search}%`)
 				)
 			: undefined,
 		isActive !== undefined ? eq(organizationCrossAccess.isDeleted, !isActive) : undefined,
