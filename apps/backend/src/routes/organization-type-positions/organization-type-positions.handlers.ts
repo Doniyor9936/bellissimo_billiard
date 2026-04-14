@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, ilike } from "drizzle-orm";
 
 import { db } from "@/db";
 import type { organizationType } from "@/db/schema/tables/organization-type";
@@ -33,7 +33,7 @@ export const listHandler: AppRouteHandler<typeof listOrganizationTypePositions> 
 
 	const whereConditions = [
 		eq(organizationTypePosition.isDeleted, false),
-		search ? eq(organizationTypePosition.name, `%${search}%`) : undefined,
+		search ? ilike(organizationTypePosition.name, `%${search}%`) : undefined,
 		isActive !== undefined ? eq(organizationTypePosition.isDeleted, !isActive) : undefined,
 	].filter(Boolean);
 
