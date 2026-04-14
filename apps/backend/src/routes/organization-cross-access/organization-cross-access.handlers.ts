@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, like } from "drizzle-orm";
 
 import { db } from "@/db";
 import { organizationCrossAccess, organizations } from "@/db/schema";
@@ -52,8 +52,8 @@ export const listHandler: AppRouteHandler<typeof listOrganizationCrossAccess> = 
 		eq(organizationCrossAccess.isDeleted, false),
 		search
 			? and(
-					eq(organizationCrossAccess.viewerId, `%${search}%`),
-					eq(organizationCrossAccess.targetId, `%${search}%`)
+					like(organizationCrossAccess.viewerId, `%${search}%`),
+					like(organizationCrossAccess.targetId, `%${search}%`)
 				)
 			: undefined,
 		isActive !== undefined ? eq(organizationCrossAccess.isDeleted, !isActive) : undefined,
