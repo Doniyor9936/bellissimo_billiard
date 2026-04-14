@@ -1,9 +1,9 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
 	organizations,
-	type organizationType,
+	organizationType,
 	organizationTypePosition,
 	userOrganization,
 	users,
@@ -49,32 +49,37 @@ export const listHandler: AppRouteHandler<typeof listOrganizationUsers> = async 
 		throw forbidden("Not authorized");
 	}
 
-	const { page, limit } = c.req.valid("query");
+	const { page, limit, search, isActive } = c.req.valid("query");
 	const offset = (page - 1) * limit;
 
+	const whereCondition = and(
+		eq(userOrganization.isDeleted, false),
+		eq(userOrganization.organizationId, organizationId),
+		search
+			? or(ilike(users.fullname, `%${search}%`), ilike(users.phone, `%${search}%`))
+			: undefined,
+		isActive !== undefined ? eq(users.isActive, isActive) : undefined
+	);
+
 	const [items, [total]] = await Promise.all([
-		db.query.userOrganization.findMany({
-			where: and(
-				eq(userOrganization.isDeleted, false),
-				eq(userOrganization.organizationId, organizationId)
-			),
-			limit,
-			offset,
-			with: {
-				organizationTypePosition: { with: { organizationType: true } },
-				user: true,
-			},
-			orderBy: (u, { desc }) => [desc(u.createdAt)],
-		}),
+		db
+			.select()
+			.from(userOrganization)
+			.innerJoin(users, eq(userOrganization.userId, users.id))
+			.innerJoin(
+				organizationTypePosition,
+				eq(userOrganization.positionId, organizationTypePosition.id)
+			)
+			.innerJoin(organizationType, eq(organizationTypePosition.typeId, organizationType.id))
+			.where(whereCondition)
+			.limit(limit)
+			.offset(offset)
+			.orderBy(desc(userOrganization.createdAt)),
 		db
 			.select({ count: count() })
 			.from(userOrganization)
-			.where(
-				and(
-					eq(userOrganization.isDeleted, false),
-					eq(userOrganization.organizationId, organizationId)
-				)
-			),
+			.innerJoin(users, eq(userOrganization.userId, users.id))
+			.where(whereCondition),
 	]);
 
 	const totalPages = Math.ceil(total.count / limit);
@@ -83,7 +88,16 @@ export const listHandler: AppRouteHandler<typeof listOrganizationUsers> = async 
 		{
 			success: true as const,
 			data: {
-				items: items.map(formatOrganizationUser),
+				items: items.map((row) =>
+					formatOrganizationUser({
+						...row.user_organization,
+						user: row.users,
+						organizationTypePosition: {
+							...row.organization_type_position,
+							organizationType: row.organization_type,
+						},
+					})
+				),
 				meta: {
 					total: total.count,
 					page,
