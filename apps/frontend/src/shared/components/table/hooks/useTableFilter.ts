@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import type { FilterValues } from '../components/AppTableFilter';
+import { useCallback, useState } from "react";
+import type { FilterValues } from "../components/AppTableFilter";
 
 /**
  * Filter holatini boshqarish uchun universal hook.
@@ -11,17 +11,17 @@ import type { FilterValues } from '../components/AppTableFilter';
  * });
  */
 function useTableFilter<T extends FilterValues>(initialValues: T) {
-  const [filterValues, setFilterValues] = useState<T>(initialValues);
+	const [filterValues, setFilterValues] = useState<T>(initialValues);
 
-  const setFilter = useCallback((key: string, value: unknown) => {
-    setFilterValues((prev) => ({ ...prev, [key]: value }));
-  }, []);
+	const setFilter = useCallback((key: string, value: unknown) => {
+		setFilterValues((prev) => ({ ...prev, [key]: value }));
+	}, []);
 
-  const resetFilters = useCallback(() => {
-    setFilterValues(initialValues);
-  }, [initialValues]);
+	const resetFilters = useCallback(() => {
+		setFilterValues(initialValues);
+	}, [initialValues]);
 
-  return { filterValues, setFilter, resetFilters };
+	return { filterValues, setFilter, resetFilters };
 }
 
 export default useTableFilter;

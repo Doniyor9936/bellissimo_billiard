@@ -228,7 +228,7 @@ export const createHandler: AppRouteHandler<typeof createOrganizationUser> = asy
 	return c.json(
 		{
 			success: true as const,
-			data: result,
+			data: result[0],
 		},
 		201
 	);
