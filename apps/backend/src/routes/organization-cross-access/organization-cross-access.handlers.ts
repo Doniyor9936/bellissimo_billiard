@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, sql } from "drizzle-orm";
+import { and, count, eq, ilike, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { organizationCrossAccess, organizations } from "@/db/schema";
