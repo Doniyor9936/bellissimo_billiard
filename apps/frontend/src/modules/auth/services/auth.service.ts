@@ -1,4 +1,5 @@
 import apiClient from "@/app/api/client";
+import { AUTH_ENDPOINTS } from "@/app/api/endpoint";
 import type {
 	AuthData,
 	AuthTokens,
@@ -14,21 +15,21 @@ import type {
 
 export const authService = {
 	async login(data: LoginRequest): Promise<AuthData> {
-		const response = await apiClient.post<LoginResponse>("/auth/login", data);
+		const response = await apiClient.post<LoginResponse>(AUTH_ENDPOINTS.login, data);
 		return response.data.data;
 	},
 
 	async refresh(data: RefreshTokenRequest): Promise<AuthTokens> {
-		const response = await apiClient.post<RefreshResponse>("/auth/refresh", data);
+		const response = await apiClient.post<RefreshResponse>(AUTH_ENDPOINTS.refresh, data);
 		return response.data.data;
 	},
 
 	async logout(data: LogoutRequest): Promise<void> {
-		await apiClient.post<LogoutResponse>("/auth/logout", data);
+		await apiClient.post<LogoutResponse>(AUTH_ENDPOINTS.logout, data);
 	},
 
 	async getMe(): Promise<User> {
-		const response = await apiClient.get<MeResponse>("/auth/me");
+		const response = await apiClient.get<MeResponse>(AUTH_ENDPOINTS.me);
 		return response.data.data;
 	},
 };

@@ -1,6 +1,11 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { DashboardPage } from "@/modules/dashboard/pages/DashboardPage";
+import OrganizationCrossAccessPage from "@/modules/organization-cross/pages/OrganizationCrossAccessPage";
+import OrganizationsPage from "@/modules/organizations/pages/OrganizationsPage";
+import OrganizationsTypePage from "@/modules/organizations-type/pages/OrganizationsTypePage";
+import OrganizationsTypePositionPage from "@/modules/organizations-type-position/pages/OrganizationsTypePositionPage";
+import UsersPage from "@/modules/users/pages/UsersPage";
 import { AuthLayout } from "@/shared/components/layouts/AuthLayout";
 import { MainLayout } from "@/shared/components/layouts/MainLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
@@ -34,6 +39,26 @@ export const routes: RouteObject[] = [
 			{
 				path: "dashboard",
 				element: <DashboardPage />,
+			},
+			{
+				path: "users",
+				element: <UsersPage />,
+			},
+			{
+				path: "organizations-type",
+				element: <OrganizationsTypePage />,
+			},
+			{
+				path: "organizations",
+				element: <OrganizationsPage />,
+			},
+			{
+				path: "organization-cross",
+				element: <OrganizationCrossAccessPage />,
+			},
+			{
+				path: "organizations-type-position",
+				element: <OrganizationsTypePositionPage />,
 			},
 		],
 	},

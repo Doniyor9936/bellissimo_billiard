@@ -1,8 +1,12 @@
 import {
+	ApartmentOutlined,
+	BankOutlined,
 	DashboardOutlined,
 	LogoutOutlined,
 	MenuFoldOutlined,
 	MenuUnfoldOutlined,
+	SafetyCertificateOutlined,
+	TeamOutlined,
 	UserOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, Dropdown, Layout, Menu, Typography } from "antd";
@@ -19,6 +23,31 @@ const menuItems = [
 		key: "/dashboard",
 		icon: <DashboardOutlined />,
 		label: "Dashboard",
+	},
+	{
+		key: "/users",
+		icon: <UserOutlined />,
+		label: "Foydalanuvchilar",
+	},
+	{
+		key: "/organizations",
+		icon: <BankOutlined />,
+		label: "Tashkilotlar",
+	},
+	{
+		key: "/organizations-type",
+		icon: <ApartmentOutlined />,
+		label: "Tashkilot turlari",
+	},
+	{
+		key: "/organization-cross",
+		icon: <SafetyCertificateOutlined />,
+		label: "Tashkilotlararo kirish huquqi",
+	},
+	{
+		key: "/organizations-type-position",
+		icon: <TeamOutlined />,
+		label: "Tashkilot turi lavozimlari",
 	},
 ];
 
@@ -60,10 +89,10 @@ export function MainLayout() {
 
 	return (
 		<Layout className="min-h-screen">
-			<Sider trigger={null} collapsible collapsed={collapsed} theme="dark">
+			<Sider width={260} trigger={null} collapsible collapsed={collapsed} theme="dark">
 				<div className="h-16 flex items-center justify-center">
 					<Text strong className="text-white text-lg">
-						{collapsed ? "App" : "My App"}
+						{collapsed ? "BC" : "Building Control"}
 					</Text>
 				</div>
 				<Menu
