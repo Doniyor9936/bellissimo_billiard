@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or, sql } from "drizzle-orm";
+import { aliasedTable, and, count, desc, eq, ilike, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { organizationCrossAccess, organizations } from "@/db/schema";
@@ -48,32 +48,43 @@ export const listHandler: AppRouteHandler<typeof listOrganizationCrossAccess> = 
 	const { page, limit, search, isActive } = c.req.valid("query");
 	const offset = (page - 1) * limit;
 
+	const viewerOrg = aliasedTable(organizations, "viewer_org");
+	const targetOrg = aliasedTable(organizations, "target_org");
+
 	const whereConditions = [
 		eq(organizationCrossAccess.isDeleted, false),
 		search
-			? or(
-					ilike(sql`${organizationCrossAccess.viewerId}::text`, `%${search}%`),
-					ilike(sql`${organizationCrossAccess.targetId}::text`, `%${search}%`)
-				)
+			? or(ilike(viewerOrg.name, `%${search}%`), ilike(targetOrg.name, `%${search}%`))
 			: undefined,
 		isActive !== undefined ? eq(organizationCrossAccess.isDeleted, !isActive) : undefined,
 	].filter(Boolean);
 
+	const baseQuery = db
+		.select({
+			id: organizationCrossAccess.id,
+			viewerId: organizationCrossAccess.viewerId,
+			targetId: organizationCrossAccess.targetId,
+			accessType: organizationCrossAccess.accessType,
+			createdAt: organizationCrossAccess.createdAt,
+			updatedAt: organizationCrossAccess.updatedAt,
+			isDeleted: organizationCrossAccess.isDeleted,
+			deletedAt: organizationCrossAccess.deletedAt,
+			viewer: viewerOrg,
+			target: targetOrg,
+		})
+		.from(organizationCrossAccess)
+		.leftJoin(viewerOrg, eq(organizationCrossAccess.viewerId, viewerOrg.id))
+		.leftJoin(targetOrg, eq(organizationCrossAccess.targetId, targetOrg.id))
+		.where(and(...whereConditions));
+
 	const [items, [total]] = await Promise.all([
-		db.query.organizationCrossAccess.findMany({
-			where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
-			limit,
-			offset,
-			orderBy: (t, { desc }) => [desc(t.createdAt)],
-			with: {
-				target: true,
-				viewer: true,
-			},
-		}),
+		baseQuery.limit(limit).offset(offset).orderBy(desc(organizationCrossAccess.createdAt)),
 		db
 			.select({ count: count() })
 			.from(organizationCrossAccess)
-			.where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
+			.leftJoin(viewerOrg, eq(organizationCrossAccess.viewerId, viewerOrg.id))
+			.leftJoin(targetOrg, eq(organizationCrossAccess.targetId, targetOrg.id))
+			.where(and(...whereConditions)),
 	]);
 
 	const totalPages = Math.ceil(total.count / limit);
