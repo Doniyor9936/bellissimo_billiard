@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun --filter '*' dev",
     "dev:backend": "bun --filter backend dev",
+    "start": "bun --filter backend start",
     "dev:frontend": "bun --filter frontend dev",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
