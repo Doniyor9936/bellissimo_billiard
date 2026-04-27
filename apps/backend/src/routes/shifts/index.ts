@@ -1,7 +1,13 @@
 import { createRouter } from "@/lib";
 import { authMiddleware } from "@/lib/auth";
+import {
+	cashTransactionHandler,
+	closeShiftHandler,
+	getActiveShiftHandler,
+	openShiftHandler,
+	xReportHandler,
+} from "./shifts.handlers";
 import { cashTransaction, closeShift, getActiveShift, openShift, xReport } from "./shifts.routes";
-import { cashTransactionHandler, closeShiftHandler, getActiveShiftHandler, openShiftHandler, xReportHandler } from "./shifts.handlers";
 
 const router = createRouter();
 router.use(authMiddleware);

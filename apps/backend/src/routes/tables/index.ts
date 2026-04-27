@@ -1,6 +1,11 @@
 import { createRouter } from "@/lib";
 import { authMiddleware } from "@/lib/auth";
-import { createTableHandler, deleteTableHandler, listTablesHandler, updateTableHandler } from "./tables.handler";
+import {
+	createTableHandler,
+	deleteTableHandler,
+	listTablesHandler,
+	updateTableHandler,
+} from "./tables.handler";
 import { createTables, deleteTable, fullTables, updateTable } from "./tables.routes";
 
 const router = createRouter();

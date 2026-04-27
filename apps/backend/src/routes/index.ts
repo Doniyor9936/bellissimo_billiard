@@ -1,12 +1,12 @@
 import { createRouter } from "../lib";
 import auth from "./auth";
 import health from "./health";
+import orders from "./orders";
+import products from "./products";
+import sessions from "./sessions";
+import shifts from "./shifts";
 import tables from "./tables";
 import users from "./users";
-import shifts from "./shifts";
-import sessions from "./sessions";
-import products from "./products";
-import orders from "./orders";
 
 const router = createRouter()
 	.route("/", health)
@@ -15,7 +15,7 @@ const router = createRouter()
 	.route("/tables", tables)
 	.route("/shifts", shifts)
 	.route("/products", products)
-	.route("/orders",orders)
-	.route("/sessions",sessions);
+	.route("/orders", orders)
+	.route("/sessions", sessions);
 
 export default router;

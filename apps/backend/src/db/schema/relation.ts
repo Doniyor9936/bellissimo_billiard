@@ -1,12 +1,12 @@
 import { relations } from "drizzle-orm";
-import { tables } from "./tables/tables";
-import { sessions } from "./tables/sessions";
-import { orders, order_items } from "./tables/orders";
-import { payments } from "./tables/payments";
 import { customers } from "./tables/customers";
-import { shifts, cash_transactions } from "./tables/shifts";
+import { order_items, orders } from "./tables/orders";
+import { payments } from "./tables/payments";
+import { inventory_logs, products } from "./tables/products";
+import { sessions } from "./tables/sessions";
+import { cash_transactions, shifts } from "./tables/shifts";
+import { tables } from "./tables/tables";
 import { users } from "./tables/users";
-import { products, inventory_logs } from "./tables/products";
 
 export const tablesRelations = relations(tables, ({ many }) => ({
 	sessions: many(sessions),
@@ -53,7 +53,7 @@ export const shiftsRelations = relations(shifts, ({ one, many }) => ({
 
 export const cashTransactionsRelations = relations(cash_transactions, ({ one }) => ({
 	shift: one(shifts, { fields: [cash_transactions.shift_id], references: [shifts.id] }),
-	user: one(users, { fields: [cash_transactions.user_id], references: [users.id] }), 
+	user: one(users, { fields: [cash_transactions.user_id], references: [users.id] }),
 }));
 
 export const productsRelations = relations(products, ({ many }) => ({

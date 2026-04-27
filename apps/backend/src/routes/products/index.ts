@@ -1,11 +1,25 @@
 import { createRouter } from "@/lib";
 import { authMiddleware, requireRole } from "@/lib/auth";
-import { createProduct, deleteProduct, getOneProduct, listProducts, stockIn, updateProduct } from "./products.routes";
-import { createProductHandler, deleteProductHandler, getOneProductHandler, listProductsHandler, stockInHandler, updateProductHandler } from "./products.handlers";
+import {
+	createProductHandler,
+	deleteProductHandler,
+	getOneProductHandler,
+	listProductsHandler,
+	stockInHandler,
+	updateProductHandler,
+} from "./products.handlers";
+import {
+	createProduct,
+	deleteProduct,
+	getOneProduct,
+	listProducts,
+	stockIn,
+	updateProduct,
+} from "./products.routes";
 
 const router = createRouter();
 router.use(authMiddleware);
-router.use(requireRole("admin"))
+router.use(requireRole("admin"));
 
 router.openapi(listProducts, listProductsHandler);
 router.openapi(getOneProduct, getOneProductHandler);

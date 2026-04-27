@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import {
@@ -10,10 +9,8 @@ import {
 } from "@/lib/auth";
 import { invalidCredentials, notFound } from "@/lib/errors";
 import { deleteRefreshToken, isRefreshTokenValid, storeRefreshToken } from "@/lib/redis";
-import type { AppBindings, AppRouteHandler } from "@/lib/types";
-
+import type { AppRouteHandler } from "@/lib/types";
 import type { login, logout, me, refresh } from "./auth.routes";
-import type { Next } from "hono";
 
 export const loginHandler: AppRouteHandler<typeof login> = async (c) => {
 	const { phone, password } = c.req.valid("json");
