@@ -14,11 +14,12 @@
     "db:seed": "bun --env-file=../../.env run src/db/seed.ts"
   },
   "dependencies": {
+    "@app/shared": "workspace:*",
     "@hono/zod-openapi": "^1.2.0",
     "@scalar/hono-api-reference": "^0.9.33",
-    "@app/shared": "workspace:*",
     "bcrypt": "^6.0.0",
     "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
     "hono": "^4.11.4",
     "hono-pino": "^0.10.3",
     "jose": "^6.1.3",

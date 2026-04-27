@@ -13,7 +13,7 @@ async function seed() {
 	console.log("Seeding database...");
 
 	const existingSupervisor = await db.query.users.findFirst({
-		where: eq(users.role, "superadmin"),
+		where: eq(users.role, "admin"),
 	});
 
 	if (existingSupervisor) {
@@ -27,7 +27,7 @@ async function seed() {
 		phone: ADMIN_PHONE,
 		password,
 		fullname: "Super Admin",
-		role: "superadmin",
+		role: "admin",
 		isActive: true,
 	});
 
