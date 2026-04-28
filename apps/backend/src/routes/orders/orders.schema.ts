@@ -1,10 +1,10 @@
 import { z } from "@hono/zod-openapi";
 import { createSelectSchema } from "drizzle-zod";
-import { order_items, orders } from "@/db/schema";
+import { orderItems, orders } from "@/db/schema";
 
 // DB dan inference
 export const OrderSchema = createSelectSchema(orders);
-export const OrderItemSchema = createSelectSchema(order_items);
+export const OrderItemSchema = createSelectSchema(orderItems);
 
 // Buyurtma qo'shish — bir yoki bir nechta mahsulot
 export const AddOrderItemsSchema = z.object({

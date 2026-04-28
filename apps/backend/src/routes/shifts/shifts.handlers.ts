@@ -1,6 +1,6 @@
 import { and, count, eq, sql, sum } from "drizzle-orm";
 import { db } from "@/db";
-import { cash_transactions, payments, sessions, shifts } from "@/db/schema";
+import { cashTransactions, payments, sessions, shifts } from "@/db/schema";
 import type { AppRouteHandler } from "@/lib";
 import type {
 	cashTransaction,
@@ -15,31 +15,31 @@ import type {
 const getShiftStats = async (shiftId: string) => {
 	const [stats] = await db
 		.select({
-			total_cash: sum(
-				sql`CASE WHEN ${payments.payment_method} = 'naqd' THEN ${payments.total_amount} ELSE 0 END`
+			totalCash: sum(
+				sql`CASE WHEN ${payments.paymentMethod} = 'naqd' THEN ${payments.totalAmount} ELSE 0 END`
 			),
-			total_card: sum(
-				sql`CASE WHEN ${payments.payment_method} = 'karta' THEN ${payments.total_amount} ELSE 0 END`
+			totalCard: sum(
+				sql`CASE WHEN ${payments.paymentMethod} = 'karta' THEN ${payments.totalAmount} ELSE 0 END`
 			),
-			total_click: sum(
-				sql`CASE WHEN ${payments.payment_method} = 'click' THEN ${payments.total_amount} ELSE 0 END`
+			totalClick: sum(
+				sql`CASE WHEN ${payments.paymentMethod} = 'click' THEN ${payments.totalAmount} ELSE 0 END`
 			),
-			total_receipts: count(payments.id),
+			totalReceipts: count(payments.id),
 		})
 		.from(payments)
-		.where(and(eq(payments.shift_id, shiftId), eq(payments.status, "completed")));
+		.where(and(eq(payments.shiftId, shiftId), eq(payments.status, "completed")));
 
 	const [{ cancelled }] = await db
 		.select({ cancelled: count(payments.id) })
 		.from(payments)
-		.where(and(eq(payments.shift_id, shiftId), eq(payments.status, "cancelled")));
+		.where(and(eq(payments.shiftId, shiftId), eq(payments.status, "cancelled")));
 
 	return {
-		total_cash: Number(stats.total_cash ?? 0),
-		total_card: Number(stats.total_card ?? 0),
-		total_click: Number(stats.total_click ?? 0),
-		total_receipts: Number(stats.total_receipts ?? 0),
-		cancelled_receipts: Number(cancelled ?? 0),
+		totalCash: Number(stats.totalCash ?? 0),
+		totalCard: Number(stats.totalCard ?? 0),
+		totalClick: Number(stats.totalClick ?? 0),
+		totalReceipts: Number(stats.totalReceipts ?? 0),
+		cancelledReceipts: Number(cancelled ?? 0),
 	};
 };
 // GET /active
@@ -59,7 +59,7 @@ export const getActiveShiftHandler: AppRouteHandler<typeof getActiveShift> = asy
 
 // POST /open
 export const openShiftHandler: AppRouteHandler<typeof openShift> = async (c) => {
-	const { opening_cash } = c.req.valid("json");
+	const { openingCash } = c.req.valid("json");
 
 	const existing = await db.query.shifts.findFirst({
 		where: eq(shifts.status, "open"),
@@ -74,8 +74,8 @@ export const openShiftHandler: AppRouteHandler<typeof openShift> = async (c) => 
 	const [newShift] = await db
 		.insert(shifts)
 		.values({
-			cashier_id: user.id,
-			opening_cash,
+			cashierId: user.id,
+			openingCash,
 			status: "open",
 		})
 		.returning();
@@ -97,7 +97,7 @@ export const closeShiftHandler: AppRouteHandler<typeof closeShift> = async (c) =
 
 	// Faol sessiyalar bormi?
 	const activeSession = await db.query.sessions.findFirst({
-		where: and(eq(sessions.shift_id, id), eq(sessions.status, "active")),
+		where: and(eq(sessions.shiftId, id), eq(sessions.status, "active")),
 	});
 
 	if (activeSession) {
@@ -110,14 +110,14 @@ export const closeShiftHandler: AppRouteHandler<typeof closeShift> = async (c) =
 		.update(shifts)
 		.set({
 			status: "closed",
-			closed_at: new Date(),
-			total_cash: stats.total_cash,
-			total_card: stats.total_card,
-			total_click: stats.total_click,
-			total_receipts: stats.total_receipts,
-			cancelled_receipts: stats.cancelled_receipts,
-			z_report_data: JSON.stringify(stats),
-			updated_at: new Date(),
+			closedAt: new Date(),
+			totalCash: stats.totalCash,
+			totalCard: stats.totalCard,
+			totalClick: stats.totalClick,
+			totalReceipts: stats.totalReceipts,
+			cancelledReceipts: stats.cancelledReceipts,
+			zReportData: JSON.stringify(stats),
+			updatedAt: new Date(),
 		})
 		.where(eq(shifts.id, id))
 		.returning();
@@ -139,7 +139,7 @@ export const xReportHandler: AppRouteHandler<typeof xReport> = async (c) => {
 
 	const stats = await getShiftStats(id);
 
-	await db.update(shifts).set({ x_report_printed_at: new Date() }).where(eq(shifts.id, id));
+	await db.update(shifts).set({ xReportPrintedAt: new Date() }).where(eq(shifts.id, id));
 
 	return c.json({ shift, stats }, 200);
 };
@@ -160,10 +160,10 @@ export const cashTransactionHandler: AppRouteHandler<typeof cashTransaction> = a
 	const user = c.get("user");
 
 	const [transaction] = await db
-		.insert(cash_transactions)
+		.insert(cashTransactions)
 		.values({
-			shift_id: id,
-			user_id: user.id,
+			shiftId: id,
+			userId: user.id,
 			type,
 			amount,
 			reason,

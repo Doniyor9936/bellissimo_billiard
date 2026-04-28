@@ -1,14 +1,14 @@
 import { z } from "@hono/zod-openapi";
 import { createSelectSchema } from "drizzle-zod";
-import { cash_transactions, cashTransactionTypeEnum, shifts } from "@/db/schema";
+import { cashTransactions, cashTransactionTypeEnum, shifts } from "@/db/schema";
 
 // DB dan inference
 export const ShiftSchema = createSelectSchema(shifts);
-export const CashTransactionSchema = createSelectSchema(cash_transactions);
+export const CashTransactionSchema = createSelectSchema(cashTransactions);
 
 // Smena ochish
 export const OpenShiftSchema = z.object({
-	opening_cash: z.number().int().min(0).default(0).openapi({
+	openingCash: z.number().int().min(0).default(0).openapi({
 		example: 200000,
 		description: "Smena boshidagi naqd pul miqdori",
 	}),

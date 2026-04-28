@@ -1,6 +1,6 @@
 import { and, eq, sum } from "drizzle-orm";
 import { db } from "@/db";
-import { order_items, orders, products, sessions } from "@/db/schema";
+import { orderItems, orders, products, sessions } from "@/db/schema";
 import type { AppRouteHandler } from "@/lib";
 import type {
 	addOrderItems,
@@ -13,7 +13,7 @@ import type {
 const getOrCreateOrder = async (sessionId: string, cashierId: string) => {
 	// Sessiyaning mavjud orderi bormi?
 	let order = await db.query.orders.findFirst({
-		where: eq(orders.session_id, sessionId),
+		where: eq(orders.sessionId, sessionId),
 		with: { items: true },
 	});
 
@@ -22,10 +22,10 @@ const getOrCreateOrder = async (sessionId: string, cashierId: string) => {
 		const [newOrder] = await db
 			.insert(orders)
 			.values({
-				session_id: sessionId,
-				cashier_id: cashierId,
+				sessionId: sessionId,
+				cashierId: cashierId,
 				subtotal: 0,
-				total_amount: 0,
+				totalAmount: 0,
 			})
 			.returning();
 
@@ -37,15 +37,15 @@ const getOrCreateOrder = async (sessionId: string, cashierId: string) => {
 
 // Order summasini qayta hisoblash
 const recalcOrder = async (orderId: string) => {
-	const items = await db.query.order_items.findMany({
-		where: eq(order_items.order_id, orderId),
+	const items = await db.query.orderItems.findMany({
+		where: eq(orderItems.orderId, orderId),
 	});
 
 	const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
 
 	const [updated] = await db
 		.update(orders)
-		.set({ subtotal, total_amount: subtotal, updated_at: new Date() })
+		.set({ subtotal, totalAmount: subtotal, updated_at: new Date() })
 		.where(eq(orders.id, orderId))
 		.returning();
 
@@ -55,14 +55,14 @@ const recalcOrder = async (orderId: string) => {
 // Sessiya order_amount ni yangilash
 const updateSessionOrderAmount = async (sessionId: string, orderId: string) => {
 	const [{ total }] = await db
-		.select({ total: sum(order_items.total_price) })
-		.from(order_items)
-		.where(eq(order_items.order_id, orderId));
+		.select({ total: sum(orderItems.totalPrice) })
+		.from(orderItems)
+		.where(eq(orderItems.orderId, orderId));
 
 	await db
 		.update(sessions)
 		.set({
-			order_amount: Number(total ?? 0),
+			orderAmount: Number(total ?? 0),
 			updated_at: new Date(),
 		})
 		.where(eq(sessions.id, sessionId));
@@ -73,7 +73,7 @@ export const getSessionOrdersHandler: AppRouteHandler<typeof getSessionOrders> =
 	const { id } = c.req.valid("param");
 
 	const order = await db.query.orders.findFirst({
-		where: eq(orders.session_id, id),
+		where: eq(orders.sessionId, id),
 		with: { items: true },
 	});
 
@@ -108,44 +108,44 @@ export const addOrderItemsHandler: AppRouteHandler<typeof addOrderItems> = async
 		});
 
 		if (!product) {
-			return c.json({ message: `Mahsulot topilmadi: ${item.product_id}` }, 404);
+			return c.json({ message: `Mahsulot topilmadi: ${item.productId}` }, 404);
 		}
 
-		if (!product.is_available) {
+		if (!product.isAvailable) {
 			return c.json({ message: `${product.name} mavjud emas` }, 422);
 		}
 
 		// Omborda yetarlimi?
-		if (product.stock_quantity < item.quantity) {
+		if (product.stockQuantity < item.quantity) {
 			return c.json(
-				{ message: `${product.name} omborda yetarli emas. Qoldi: ${product.stock_quantity}` },
+				{ message: `${product.name} omborda yetarli emas. Qoldi: ${product.stockQuantity}` },
 				422
 			);
 		}
 
 		// Xuddi shu mahsulot order da bormi? → miqdor qo'shiladi
-		const existingItem = await db.query.order_items.findFirst({
-			where: and(eq(order_items.order_id, order.id), eq(order_items.product_id, item.product_id)),
+		const existingItem = await db.query.orderItems.findFirst({
+			where: and(eq(orderItems.orderId, order.id), eq(orderItems.productId, item.productId)),
 		});
 
 		if (existingItem) {
 			const newQty = existingItem.quantity + item.quantity;
 			await db
-				.update(order_items)
+				.update(orderItems)
 				.set({
 					quantity: newQty,
-					total_price: newQty * existingItem.unit_price,
+					total_price: newQty * existingItem.unitPrice,
 					updated_at: new Date(),
 				})
-				.where(eq(order_items.id, existingItem.id));
+				.where(eq(orderItems.id, existingItem.id));
 		} else {
-			await db.insert(order_items).values({
-				order_id: order.id,
-				product_id: item.product_id,
-				product_name: product.name,
-				unit_price: product.selling_price,
+			await db.insert(orderItems).values({
+				orderId: order.id,
+				productId: item.productId,
+				productName: product.name,
+				unitPrice: product.sellingPrice,
 				quantity: item.quantity,
-				total_price: product.selling_price * item.quantity,
+				totalPrice: product.sellingPrice * item.quantity,
 				notes: item.notes,
 			});
 		}
@@ -154,10 +154,10 @@ export const addOrderItemsHandler: AppRouteHandler<typeof addOrderItems> = async
 		await db
 			.update(products)
 			.set({
-				stock_quantity: product.stock_quantity - item.quantity,
-				updated_at: new Date(),
+				stockQuantity: product.stockQuantity - item.quantity,
+				updatedAt: new Date(),
 			})
-			.where(eq(products.id, item.product_id));
+			.where(eq(products.id, item.productId));
 	}
 
 	// Order summasini yangilash
@@ -178,8 +178,8 @@ export const updateOrderItemHandler: AppRouteHandler<typeof updateOrderItem> = a
 	const { id } = c.req.valid("param");
 	const { quantity } = c.req.valid("json");
 
-	const item = await db.query.order_items.findFirst({
-		where: eq(order_items.id, id),
+	const item = await db.query.orderItems.findFirst({
+		where: eq(orderItems.id, id),
 		with: { product: true },
 	});
 
@@ -190,38 +190,38 @@ export const updateOrderItemHandler: AppRouteHandler<typeof updateOrderItem> = a
 	const diff = quantity - item.quantity; // +2 yoki -1
 
 	// Ombor tekshirish (faqat ko'payganda)
-	if (diff > 0 && item.product.stock_quantity < diff) {
-		return c.json({ message: `Omborda yetarli emas. Qoldi: ${item.product.stock_quantity}` }, 422);
+	if (diff > 0 && item.product.stockQuantity < diff) {
+		return c.json({ message: `Omborda yetarli emas. Qoldi: ${item.product.stockQuantity}` }, 422);
 	}
 
 	// Item yangilash
 	const [updated] = await db
-		.update(order_items)
+		.update(orderItems)
 		.set({
 			quantity,
-			total_price: quantity * item.unit_price,
+			total_price: quantity * item.unitPrice,
 			updated_at: new Date(),
 		})
-		.where(eq(order_items.id, id))
+		.where(eq(orderItems.id, id))
 		.returning();
 
 	// Ombor yangilash
 	await db
 		.update(products)
 		.set({
-			stock_quantity: item.product.stock_quantity - diff,
+			stockQuantity: item.product.stockQuantity - diff,
 			updated_at: new Date(),
 		})
-		.where(eq(products.id, item.product_id));
+		.where(eq(products.id, item.productId));
 
 	// Order va sessiya summasini yangilash
 	const order = await db.query.orders.findFirst({
-		where: eq(orders.id, item.order_id),
+		where: eq(orders.id, item.orderId),
 	});
 
 	if (order) {
 		await recalcOrder(order.id);
-		await updateSessionOrderAmount(order.session_id, order.id);
+		await updateSessionOrderAmount(order.sessionId, order.id);
 	}
 
 	return c.json(updated, 200);
@@ -231,8 +231,8 @@ export const updateOrderItemHandler: AppRouteHandler<typeof updateOrderItem> = a
 export const removeOrderItemHandler: AppRouteHandler<typeof removeOrderItem> = async (c) => {
 	const { id } = c.req.valid("param");
 
-	const item = await db.query.order_items.findFirst({
-		where: eq(order_items.id, id),
+	const item = await db.query.orderItems.findFirst({
+		where: eq(orderItems.id, id),
 		with: { product: true },
 	});
 
@@ -241,16 +241,16 @@ export const removeOrderItemHandler: AppRouteHandler<typeof removeOrderItem> = a
 	}
 
 	// O'chirish
-	await db.delete(order_items).where(eq(order_items.id, id));
+	await db.delete(orderItems).where(eq(orderItems.id, id));
 
 	// Omborni qaytarish
 	await db
 		.update(products)
 		.set({
-			stock_quantity: item.product.stock_quantity + item.quantity,
-			updated_at: new Date(),
+			stockQuantity: item.product.stockQuantity + item.quantity,
+			updatedAt: new Date(),
 		})
-		.where(eq(products.id, item.product_id));
+		.where(eq(products.id, item.productId));
 
 	// Order va sessiya summasini yangilash
 	const order = await db.query.orders.findFirst({
@@ -259,7 +259,7 @@ export const removeOrderItemHandler: AppRouteHandler<typeof removeOrderItem> = a
 
 	if (order) {
 		await recalcOrder(order.id);
-		await updateSessionOrderAmount(order.session_id, order.id);
+		await updateSessionOrderAmount(order.sessionId, order.id);
 	}
 
 	return c.body(null, 204);

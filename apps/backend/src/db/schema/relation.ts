@@ -48,7 +48,7 @@ export const shiftsRelations = relations(shifts, ({ one, many }) => ({
 	cashier: one(users, { fields: [shifts.cashierId], references: [users.id] }),
 	sessions: many(sessions),
 	payments: many(payments),
-	cash_transactions: many(cashTransactions),
+	cashTransactions: many(cashTransactions),
 }));
 
 export const cashTransactionsRelations = relations(cashTransactions, ({ one }) => ({
