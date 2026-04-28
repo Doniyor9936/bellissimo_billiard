@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, shifts, tables } from "@/db/schema";
 import type { AppRouteHandler } from "@/lib";
@@ -15,20 +15,20 @@ import type {
 } from "./sessions.routes";
 
 // Vaqt va summani hisoblash
-const calcSessionAmounts = (session: typeof sessions.$inferSelect) => {
+const calcSessionAmounts = (session: typeof sessions.$inferSelect, ovverideEndedAt?: Date) => {
 	const now = new Date();
-	const start = new Date(session.started_at);
-	const pausedMs = session.paused_at ? now.getTime() - new Date(session.paused_at).getTime() : 0;
+	const start = new Date(session.startedAt);
+	const end = ovverideEndedAt ? ovverideEndedAt : session.endedAt ? new Date(session.endedAt) : now;
+	// const pausedMs = session.pausedAt ? now.getTime() - new Date(session.pausedAt).getTime() : 0;
 
-	const elapsedMs = now.getTime() - start.getTime() - pausedMs;
+	const elapsedMs = Math.max(0, end.getTime() - start.getTime());
 	const elapsedMinutes = Math.floor(elapsedMs / 1000 / 60);
-
 	// Soatlik tarif bo'yicha hisoblash
-	const gameAmount = Math.floor((elapsedMinutes / 60) * session.hourly_rate);
+	const gameAmount = Math.floor((elapsedMinutes / 60) * session.hourlyRate);
 
 	// Xizmat haqqi
-	const subtotal = gameAmount + session.order_amount - session.discount_amount;
-	const serviceChargeAmount = Math.floor((subtotal * session.service_charge_pct) / 100);
+	const subtotal = gameAmount + session.orderAmount - session.discountAmount;
+	const serviceChargeAmount = Math.floor((subtotal * session.serviceChargePct) / 100);
 	const totalAmount = subtotal + serviceChargeAmount;
 
 	return { elapsedMinutes, gameAmount, serviceChargeAmount, totalAmount };
@@ -40,46 +40,56 @@ const buildSessionDetail = (session: typeof sessions.$inferSelect, tableName: st
 
 	return {
 		...session,
-		table_name: tableName,
-		elapsed_minutes: elapsedMinutes,
-		current_game_amount: gameAmount,
-		current_total: totalAmount,
+		tableName: tableName,
+		elapsedMinutes: elapsedMinutes,
+		currentGameAmount: gameAmount,
+		currentTotal: totalAmount,
 	};
 };
 
 // GET /
 export const listSessionsHandler: AppRouteHandler<typeof listSessions> = async (c) => {
-	const { status, table_id, shift_id, page, limit } = c.req.valid("query");
+	const { search, status, tableId, shiftId, page, limit } = c.req.valid("query");
 	const offset = (page - 1) * limit;
 
 	const conditions = [];
 	if (status) {
 		conditions.push(eq(sessions.status, status));
 	}
-	if (table_id) {
-		conditions.push(eq(sessions.table_id, table_id));
+	if (tableId) {
+		conditions.push(eq(sessions.tableId, tableId));
 	}
-	if (shift_id) {
-		conditions.push(eq(sessions.shift_id, shift_id));
+	if (shiftId) {
+		conditions.push(eq(sessions.shiftId, shiftId));
+	}
+	if (search) {
+		conditions.push(
+			or(ilike(sessions.guestName, `%${search}%`), ilike(tables.name, `%${search}%`))
+		);
 	}
 
 	const where = conditions.length ? and(...conditions) : undefined;
 
 	const [data, [{ total }]] = await Promise.all([
-		db.query.sessions.findMany({
-			where,
-			with: { table: true },
-			limit,
-			offset,
-			orderBy: (s, { desc }) => desc(s.created_at),
-		}),
-		db.select({ total: count() }).from(sessions).where(where),
+		db
+			.select()
+			.from(sessions)
+			.leftJoin(tables, eq(sessions.tableId, tables.id))
+			.where(where)
+			.limit(limit)
+			.offset(offset)
+			.orderBy(desc(sessions.createdAt)),
+		db
+			.select({ total: count() })
+			.from(sessions)
+			.leftJoin(tables, eq(sessions.tableId, tables.id))
+			.where(where),
 	]);
 
-	const result = data.map((s) => buildSessionDetail(s, s.table.name));
+	const result = data.map((row) => buildSessionDetail(row.sessions, row.tables?.name ?? ""));
 
 	return c.json(
-		{ data: result, meta: { total, page, limit, total_pages: Math.ceil(total / limit) } },
+		{ data: result, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } },
 		200
 	);
 };
@@ -102,7 +112,7 @@ export const getOneSessionHandler: AppRouteHandler<typeof getOneSession> = async
 
 // POST / — sessiya ochish
 export const openSessionHandler: AppRouteHandler<typeof openSession> = async (c) => {
-	const { table_id, guest_count, guest_name, customer_id } = c.req.valid("json");
+	const { tableId, guestCount, guestName, customerId } = c.req.valid("json");
 	const user = c.get("user");
 
 	// Aktiv smena bormi?
@@ -115,7 +125,7 @@ export const openSessionHandler: AppRouteHandler<typeof openSession> = async (c)
 	}
 
 	// Stol bo'shmi?
-	const [table] = await db.select().from(tables).where(eq(tables.id, table_id));
+	const [table] = await db.select().from(tables).where(eq(tables.id, tableId));
 
 	if (!table) {
 		return c.json({ message: "Stol topilmadi" }, 404);
@@ -129,15 +139,15 @@ export const openSessionHandler: AppRouteHandler<typeof openSession> = async (c)
 	const [newSession] = await db
 		.insert(sessions)
 		.values({
-			table_id,
-			cashier_id: user.id,
-			customer_id,
-			shift_id: activeShift.id,
-			guest_count,
-			guest_name,
-			table_type: table.type,
-			hourly_rate: table.hourly_rate,
-			service_charge_pct: 10,
+			tableId,
+			cashierId: user.id,
+			customerId,
+			shiftId: activeShift.id,
+			guestCount,
+			guestName,
+			tableType: table.type,
+			hourlyRate: table.hourlyRate,
+			serviceChargePct: 10,
 			status: "active",
 		})
 		.returning();
@@ -145,8 +155,8 @@ export const openSessionHandler: AppRouteHandler<typeof openSession> = async (c)
 	// Stolni band qilish
 	await db
 		.update(tables)
-		.set({ status: "band", updated_at: new Date() })
-		.where(eq(tables.id, table_id));
+		.set({ status: "band", updatedAt: new Date() })
+		.where(eq(tables.id, tableId));
 
 	return c.json(buildSessionDetail(newSession, table.name), 201);
 };
@@ -169,7 +179,7 @@ export const pauseSessionHandler: AppRouteHandler<typeof pauseSession> = async (
 
 	const [updated] = await db
 		.update(sessions)
-		.set({ status: "paused", paused_at: new Date(), updated_at: new Date() })
+		.set({ status: "paused", pausedAt: new Date(), updatedAt: new Date() })
 		.where(eq(sessions.id, id))
 		.returning();
 
@@ -191,18 +201,21 @@ export const resumeSessionHandler: AppRouteHandler<typeof resumeSession> = async
 	if (session.status !== "paused") {
 		return c.json({ message: "Sessiya pauzada emas" }, 422);
 	}
+	if (!session.pausedAt) {
+		return c.json({ message: "Sessiya pauza vaqti topilmadi" }, 422);
+	}
 
 	// Pauza vaqtini hisoblash va started_at ga qo'shish
-	const pausedMs = Date.now() - new Date(session.paused_at!).getTime();
-	const newStartedAt = new Date(new Date(session.started_at).getTime() + pausedMs);
+	const pausedMs = Date.now() - new Date(session.pausedAt!).getTime();
+	const newStartedAt = new Date(new Date(session.startedAt).getTime() + pausedMs);
 
 	const [updated] = await db
 		.update(sessions)
 		.set({
 			status: "active",
-			paused_at: null,
-			started_at: newStartedAt, // ← pauza vaqti hisobga olinmaydi
-			updated_at: new Date(),
+			pausedAt: null,
+			startedAt: newStartedAt, // ← pauza vaqti hisobga olinmaydi
+			updatedAt: new Date(),
 		})
 		.where(eq(sessions.id, id))
 		.returning();
@@ -213,7 +226,7 @@ export const resumeSessionHandler: AppRouteHandler<typeof resumeSession> = async
 // PATCH /:id/rate
 export const updateRateHandler: AppRouteHandler<typeof updateRate> = async (c) => {
 	const { id } = c.req.valid("param");
-	const { hourly_rate } = c.req.valid("json");
+	const { hourlyRate } = c.req.valid("json");
 
 	const session = await db.query.sessions.findFirst({
 		where: and(eq(sessions.id, id), eq(sessions.status, "active")),
@@ -226,7 +239,7 @@ export const updateRateHandler: AppRouteHandler<typeof updateRate> = async (c) =
 
 	const [updated] = await db
 		.update(sessions)
-		.set({ hourly_rate, updated_at: new Date() })
+		.set({ hourlyRate, updatedAt: new Date() })
 		.where(eq(sessions.id, id))
 		.returning();
 
@@ -236,7 +249,7 @@ export const updateRateHandler: AppRouteHandler<typeof updateRate> = async (c) =
 // PATCH /:id/discount
 export const applyDiscountHandler: AppRouteHandler<typeof applyDiscount> = async (c) => {
 	const { id } = c.req.valid("param");
-	const { discount_amount, discount_reason } = c.req.valid("json");
+	const { discountAmount, discountReason } = c.req.valid("json");
 
 	const session = await db.query.sessions.findFirst({
 		where: eq(sessions.id, id),
@@ -249,7 +262,7 @@ export const applyDiscountHandler: AppRouteHandler<typeof applyDiscount> = async
 
 	const [updated] = await db
 		.update(sessions)
-		.set({ discount_amount, discount_reason, updated_at: new Date() })
+		.set({ discountAmount, discountReason, updatedAt: new Date() })
 		.where(eq(sessions.id, id))
 		.returning();
 
@@ -269,19 +282,22 @@ export const closeSessionHandler: AppRouteHandler<typeof closeSession> = async (
 		return c.json({ message: "Faol sessiya topilmadi" }, 404);
 	}
 
-	const { elapsedMinutes, gameAmount, serviceChargeAmount, totalAmount } =
-		calcSessionAmounts(session);
+	const endedAT = new Date();
+	const { elapsedMinutes, gameAmount, serviceChargeAmount, totalAmount } = calcSessionAmounts({
+		...session,
+		endedAt: endedAT,
+	});
 
 	const [closed] = await db
 		.update(sessions)
 		.set({
 			status: "closed",
-			ended_at: new Date(),
-			total_minutes: elapsedMinutes,
-			game_amount: gameAmount,
-			service_charge_amount: serviceChargeAmount,
-			total_amount: totalAmount,
-			updated_at: new Date(),
+			endedAt: endedAT,
+			totalMinutes: elapsedMinutes,
+			gameAmount: gameAmount,
+			serviceChargeAmount: serviceChargeAmount,
+			totalAmount: totalAmount,
+			updatedAt: new Date(),
 		})
 		.where(eq(sessions.id, id))
 		.returning();
@@ -289,8 +305,8 @@ export const closeSessionHandler: AppRouteHandler<typeof closeSession> = async (
 	// Stolni bo'shatish
 	await db
 		.update(tables)
-		.set({ status: "bosh", updated_at: new Date() })
-		.where(eq(tables.id, session.table_id));
+		.set({ status: "bosh", updatedAt: new Date() })
+		.where(eq(tables.id, session.tableId));
 
 	return c.json(buildSessionDetail(closed, session.table.name), 200);
 };
@@ -315,8 +331,8 @@ export const cancelSessionHandler: AppRouteHandler<typeof cancelSession> = async
 		.update(sessions)
 		.set({
 			status: "cancelled",
-			ended_at: new Date(),
-			updated_at: new Date(),
+			endedAt: new Date(),
+			updatedAt: new Date(),
 		})
 		.where(eq(sessions.id, id))
 		.returning();
@@ -324,8 +340,8 @@ export const cancelSessionHandler: AppRouteHandler<typeof cancelSession> = async
 	// Stolni bo'shatish
 	await db
 		.update(tables)
-		.set({ status: "bosh", updated_at: new Date() })
-		.where(eq(tables.id, session.table_id));
+		.set({ status: "bosh", updatedAt: new Date() })
+		.where(eq(tables.id, session.tableId));
 
 	return c.json(buildSessionDetail(cancelled, session.table.name), 200);
 };

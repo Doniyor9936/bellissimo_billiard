@@ -1,6 +1,6 @@
 import { and, count, eq, ilike, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { inventory_logs, products } from "@/db/schema";
+import { inventoryLogs, products } from "@/db/schema";
 import type { AppRouteHandler } from "@/lib";
 import type {
 	createProduct,
@@ -12,19 +12,16 @@ import type {
 } from "./products.routes";
 
 export const listProductsHandler: AppRouteHandler<typeof listProducts> = async (c) => {
-	const { search, category, is_available, low_stock, page, limit } = c.req.valid("query");
+	const { search, category, isAvailable, lowStock, page, limit } = c.req.valid("query");
 	const user = c.get("user");
 
 	const offset = (page - 1) * limit;
 
 	const conditions = [];
 	if (user.role !== "admin") {
-		conditions.push(eq(products.is_available, true));
-	} else {
-		// Admin filter bera oladi
-		if (is_available !== undefined) {
-			conditions.push(eq(products.is_available, is_available === "true"));
-		}
+		conditions.push(eq(products.isAvailable, true));
+	} else if (isAvailable !== undefined) {
+		conditions.push(eq(products.isAvailable, isAvailable === "true"));
 	}
 
 	if (category) {
@@ -35,20 +32,14 @@ export const listProductsHandler: AppRouteHandler<typeof listProducts> = async (
 	}
 
 	// Kam qolgan mahsulotlar (stock_quantity <= min_stock)
-	if (low_stock) {
-		conditions.push(lte(products.stock_quantity, products.min_stock));
+	if (lowStock) {
+		conditions.push(lte(products.stockQuantity, products.minStock));
 	}
 
 	const where = and(...conditions);
 
 	const [data, [{ total }]] = await Promise.all([
-		db
-			.select()
-			.from(products)
-			.where(where)
-			.orderBy(products.sort_order)
-			.limit(limit)
-			.offset(offset),
+		db.select().from(products).where(where).orderBy(products.sortOrder).limit(limit).offset(offset),
 		db.select({ total: count() }).from(products).where(where),
 	]);
 
@@ -73,13 +64,13 @@ export const createProductHandler: AppRouteHandler<typeof createProduct> = async
 	const [newProduct] = await db.insert(products).values(body).returning();
 
 	// Inventory log
-	await db.insert(inventory_logs).values({
-		product_id: newProduct.id,
+	await db.insert(inventoryLogs).values({
+		productId: newProduct.id,
 		type: "kirim",
-		quantity: newProduct.stock_quantity,
-		quantity_before: 0,
-		quantity_after: newProduct.stock_quantity,
-		unit_cost: newProduct.cost_price ?? undefined,
+		quantity: newProduct.stockQuantity,
+		quantityBefore: 0,
+		quantityAfter: newProduct.stockQuantity,
+		unitCost: newProduct.costPrice ?? undefined,
 		reason: "Yangi mahsulot qo'shildi",
 	});
 
@@ -92,7 +83,7 @@ export const updateProductHandler: AppRouteHandler<typeof updateProduct> = async
 
 	const [updated] = await db
 		.update(products)
-		.set({ ...body, updated_at: new Date() })
+		.set({ ...body, updatedAt: new Date() })
 		.where(eq(products.id, id))
 		.returning();
 
@@ -115,7 +106,7 @@ export const deleteProductHandler: AppRouteHandler<typeof deleteProduct> = async
 	// Soft delete
 	const [_deleted] = await db
 		.update(products)
-		.set({ is_available: false, updated_at: new Date() })
+		.set({ isAvailable: false, updatedAt: new Date() })
 		.where(eq(products.id, id))
 		.returning();
 
@@ -124,7 +115,7 @@ export const deleteProductHandler: AppRouteHandler<typeof deleteProduct> = async
 
 export const stockInHandler: AppRouteHandler<typeof stockIn> = async (c) => {
 	const { id } = c.req.valid("param");
-	const { quantity, unit_cost, reason } = c.req.valid("json");
+	const { quantity, unitCost, reason } = c.req.valid("json");
 	const user = c.get("user");
 
 	const [product] = await db.select().from(products).where(eq(products.id, id));
@@ -133,25 +124,25 @@ export const stockInHandler: AppRouteHandler<typeof stockIn> = async (c) => {
 		return c.json({ message: "Mahsulot topilmadi" }, 404);
 	}
 
-	const quantityBefore = product.stock_quantity;
+	const quantityBefore = product.stockQuantity;
 	const quantityAfter = quantityBefore + quantity;
 
 	// Omborni yangilash
 	const [updated] = await db
 		.update(products)
-		.set({ stock_quantity: quantityAfter, updated_at: new Date() })
+		.set({ stockQuantity: quantityAfter, updatedAt: new Date() })
 		.where(eq(products.id, id))
 		.returning();
 
 	// Inventory log
-	await db.insert(inventory_logs).values({
-		product_id: id,
-		user_id: user.id,
+	await db.insert(inventoryLogs).values({
+		productId: id,
+		userId: user.id,
 		type: "kirim",
 		quantity,
-		quantity_before: quantityBefore,
-		quantity_after: quantityAfter,
-		unit_cost,
+		quantityBefore: quantityBefore,
+		quantityAfter: quantityAfter,
+		unitCost,
 		reason: reason ?? "Ombor kirim",
 	});
 

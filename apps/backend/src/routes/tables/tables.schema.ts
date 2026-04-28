@@ -10,9 +10,9 @@ export const CreateTableSchema = z
 		number: z.number().int().positive(),
 		type: z.enum(["america", "rus_piramida", "snooker"]),
 		category: z.enum(["standard", "vip"]).default("standard"),
-		hourly_rate: z.number().int().positive(),
-		min_rate: z.number().int().positive().optional(),
-		sort_order: z.number().int().default(0),
+		hourlyRate: z.number().int().positive(),
+		minRate: z.number().int().positive().optional(),
+		sortOrder: z.number().int().default(0),
 		description: z.string().optional(),
 	})
 	.openapi({
@@ -23,9 +23,9 @@ export const CreateTableSchema = z
 			number: 1,
 			type: "america",
 			category: "standard",
-			hourly_rate: 50000,
-			min_rate: 10000,
-			sort_order: 0,
+			hourlyRate: 50000,
+			minRate: 10000,
+			sortOrder: 0,
 			description: "Bu jadval 1 raqamli va standart kategoriyaga mansub.",
 		},
 	});
@@ -84,6 +84,6 @@ export const TableListResponseSchema = z.object({
 		total: z.number(),
 		page: z.number(),
 		limit: z.number(),
-		total_pages: z.number(),
+		totalPages: z.number(),
 	}),
 });

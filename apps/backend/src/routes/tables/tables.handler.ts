@@ -14,7 +14,7 @@ export const listTablesHandler: AppRouteHandler<typeof fullTables> = async (c) =
 	const { search, limit, status, category, page } = c.req.valid("query");
 
 	const offset = (page - 1) * limit;
-	const conditions = [eq(tables.is_active, true)];
+	const conditions = [eq(tables.isActive, true)];
 
 	if (status) {
 		conditions.push(eq(tables.status, status));
@@ -29,7 +29,7 @@ export const listTablesHandler: AppRouteHandler<typeof fullTables> = async (c) =
 	const where = conditions.length ? and(...conditions) : undefined;
 
 	const [data, [{ total }]] = await Promise.all([
-		db.select().from(tables).where(where).orderBy(tables.sort_order).limit(1).offset(offset),
+		db.select().from(tables).where(where).orderBy(tables.sortOrder).limit(1).offset(offset),
 		db.select({ total: count() }).from(tables).where(where),
 	]);
 
@@ -39,22 +39,35 @@ export const listTablesHandler: AppRouteHandler<typeof fullTables> = async (c) =
 			total,
 			page,
 			limit,
-			total_pages: Math.ceil(total / limit),
+			totalPages: Math.ceil(total / limit),
 		},
 	});
 };
 
 // POST / — yangi stol yaratish
 export const createTableHandler: AppRouteHandler<typeof createTables> = async (c) => {
-	const body = c.req.valid("json");
+	const { name, number, type, category, hourlyRate, minRate, sortOrder, description } =
+		c.req.valid("json");
 
-	const [existing] = await db.select().from(tables).where(eq(tables.number, body.number));
+	const [existing] = await db.select().from(tables).where(eq(tables.number, number));
 
 	if (existing) {
-		return c.json({ message: `Stol ${body.number} allaqachon mavjud` }, 422);
+		return c.json({ message: `Stol ${number} allaqachon mavjud` }, 422);
 	}
 
-	const [newTable] = await db.insert(tables).values(body).returning();
+	const [newTable] = await db
+		.insert(tables)
+		.values({
+			name,
+			number,
+			type,
+			category,
+			hourlyRate,
+			minRate,
+			sortOrder,
+			description,
+		})
+		.returning();
 
 	return c.json(newTable, 201);
 };
@@ -76,7 +89,7 @@ export const updateTableHandler: AppRouteHandler<typeof updateTable> = async (c)
 
 	const [updated] = await db
 		.update(tables)
-		.set({ ...body, updated_at: new Date() })
+		.set({ ...body, updatedAt: new Date() })
 		.where(eq(tables.id, id))
 		.returning();
 
@@ -92,7 +105,7 @@ export const deleteTableHandler: AppRouteHandler<typeof deleteTable> = async (c)
 
 	// Faol sessiya bormi tekshir
 	const activeSession = await db.query.sessions.findFirst({
-		where: (s, { and, eq }) => and(eq(s.table_id, id), eq(s.status, "active")),
+		where: (s, { and, eq }) => and(eq(s.tableId, id), eq(s.status, "active")),
 	});
 
 	if (activeSession) {
@@ -103,8 +116,8 @@ export const deleteTableHandler: AppRouteHandler<typeof deleteTable> = async (c)
 	const [deleted] = await db
 		.update(tables)
 		.set({
-			is_active: false,
-			updated_at: new Date(),
+			isActive: false,
+			updatedAt: new Date(),
 		})
 		.where(eq(tables.id, id))
 		.returning();
